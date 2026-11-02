@@ -1,21 +1,26 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Header } from './components/Header';
 import { HeroSection } from './components/HeroSection';
+import { ShaadiQuickMatchCard } from './components/ShaadiQuickMatchCard';
+import { BrowseCategoryCards } from './components/BrowseCategoryCards';
+import { VipShaadiBannerCard } from './components/VipShaadiBannerCard';
 import { PillarsSection } from './components/PillarsSection';
 import { PhilosophySection } from './components/PhilosophySection';
 import { SuccessStoriesSection } from './components/SuccessStoriesSection';
+import { ShaadiLiveCard } from './components/ShaadiLiveCard';
 import { MatchCriteriaWeaver } from './components/MatchCriteriaWeaver';
 import { ProfileCard } from './components/ProfileCard';
 import { ProfileDrawer } from './components/ProfileDrawer';
 import { ShortlistDrawer } from './components/ShortlistDrawer';
 import { ChatModal } from './components/ChatModal';
 import { BioDataModal } from './components/BioDataModal';
+import { MobileAppBannerCard } from './components/MobileAppBannerCard';
 import { ConsultationBanner } from './components/ConsultationBanner';
 import { ConsultationModal } from './components/ConsultationModal';
 import { FooterSection } from './components/FooterSection';
 import { ToastProvider, useToast } from './components/Toast';
 import { MOCK_PROFILES, CURRENT_USERS } from './data/mockProfiles';
-import type { Profile, CurrentUser, FilterCriteria } from './types/profile';
+import type { Profile, CurrentUser, FilterCriteria, CareerTier, Religion, LocationTier } from './types/profile';
 import { RotateCcw, Search } from 'lucide-react';
 
 const DEFAULT_CRITERIA: FilterCriteria = {
@@ -63,7 +68,7 @@ const MainApp: React.FC = () => {
     return saved !== null ? saved === 'true' : true;
   });
 
-  // Dark Mode (default false for the warm Lovable daytime aesthetic, toggleable anytime)
+  // Dark Mode
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     const saved = localStorage.getItem('sangam_theme_dark');
     return saved !== null ? saved === 'true' : false;
@@ -151,6 +156,37 @@ const MainApp: React.FC = () => {
     }
   };
 
+  // Shaadi Quick Search Handler
+  const handleShaadiQuickSearch = (params: {
+    gender: 'Female' | 'Male';
+    minAge: number;
+    maxAge: number;
+    religion: Religion;
+    motherTongue?: string;
+  }) => {
+    // If searching gender differs from current seeking gender, switch perspective accordingly!
+    if (currentUser.seekingGender !== params.gender) {
+      const targetUser = CURRENT_USERS.find(u => u.seekingGender === params.gender) || currentUser;
+      setCurrentUser(targetUser);
+    }
+
+    setCriteria(prev => ({
+      ...prev,
+      minAge: params.minAge,
+      maxAge: params.maxAge,
+      religion: params.religion,
+      searchQuery: params.motherTongue || '',
+    }));
+
+    addToast(
+      'Search Criteria Applied',
+      `Showing verified ${params.gender === 'Female' ? 'brides' : 'grooms'} aged ${params.minAge}-${params.maxAge}`,
+      'sparkle'
+    );
+
+    scrollToId('matches');
+  };
+
   // Candidates filtering based on gender seeking and dynamic criteria
   const filteredProfiles = useMemo(() => {
     return MOCK_PROFILES.filter((profile) => {
@@ -226,9 +262,10 @@ const MainApp: React.FC = () => {
         const matchCollege = profile.education.university.toLowerCase().includes(q);
         const matchCity = profile.location.city.toLowerCase().includes(q);
         const matchGotra = profile.kundali.gotra.toLowerCase().includes(q);
+        const matchTongue = profile.motherTongue.toLowerCase().includes(q);
         const matchTags = profile.tags.some(t => t.toLowerCase().includes(q));
 
-        if (!matchName && !matchProfession && !matchEmployer && !matchCollege && !matchCity && !matchGotra && !matchTags) {
+        if (!matchName && !matchProfession && !matchEmployer && !matchCollege && !matchCity && !matchGotra && !matchTongue && !matchTags) {
           return false;
         }
       }
@@ -261,7 +298,7 @@ const MainApp: React.FC = () => {
   const candidateGenderLabel = currentUser.seekingGender === 'Female' ? 'Brides' : 'Grooms';
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#fff7fd] text-[#23162c] dark:bg-zinc-950 dark:text-zinc-100 transition-colors duration-300">
+    <div className="min-h-screen flex flex-col bg-[#fcf8fa] text-[#1e1325] dark:bg-[#0c0d14] dark:text-zinc-100 transition-colors duration-300">
       
       {/* 1. Header & Navigation matching url-weaver-workshop */}
       <Header
@@ -287,16 +324,53 @@ const MainApp: React.FC = () => {
         onBookConsultation={() => setIsConsultationModalOpen(true)}
       />
 
-      {/* 3. Two Foundational Pillars of Care */}
+      {/* 3. Iconic Shaadi.com Quick-Match Bar Card */}
+      <ShaadiQuickMatchCard
+        onQuickSearch={handleShaadiQuickSearch}
+      />
+
+      {/* 4. Shaadi-Style "Browse Matches By Category" Banner Cards */}
+      <BrowseCategoryCards
+        onSelectCareer={(tier: CareerTier) => {
+          setCriteria(prev => ({ ...prev, careerTier: tier }));
+          addToast('Category Filter Applied', `Showing ${tier}`, 'sparkle');
+          scrollToId('matches');
+        }}
+        onSelectLocation={(loc: LocationTier) => {
+          setCriteria(prev => ({ ...prev, locationPref: loc }));
+          addToast('Location Filter Applied', `Showing ${loc}`, 'sparkle');
+          scrollToId('matches');
+        }}
+        onSelectReligion={(rel: Religion) => {
+          setCriteria(prev => ({ ...prev, religion: rel }));
+          addToast('Religion Filter Applied', `Showing ${rel}`, 'sparkle');
+          scrollToId('matches');
+        }}
+        onSelectSearchTag={(tag: string) => {
+          setCriteria(prev => ({ ...prev, searchQuery: tag }));
+          addToast('Filter Applied', `Filtered by: ${tag}`, 'sparkle');
+          scrollToId('matches');
+        }}
+      />
+
+      {/* 5. VIP Shaadi / Elite Matchmaking Banner Card */}
+      <VipShaadiBannerCard
+        onInquireVip={() => setIsConsultationModalOpen(true)}
+      />
+
+      {/* 6. Two Foundational Pillars of Care */}
       <PillarsSection />
 
-      {/* 4. Matchmaker Philosophy Section */}
+      {/* 7. Matchmaker Philosophy Section */}
       <PhilosophySection />
 
-      {/* 5. Real Unions & Success Stories */}
+      {/* 8. Real Unions & Success Stories Showcase */}
       <SuccessStoriesSection />
 
-      {/* 6. The "Match Criteria Weaver" (Workshop Control Bar) */}
+      {/* 9. Shaadi Live: Curated Virtual Speed Meets Banner */}
+      <ShaadiLiveCard />
+
+      {/* 10. The "Match Criteria Weaver" (Workshop Control Bar) */}
       <MatchCriteriaWeaver
         criteria={criteria}
         onChange={setCriteria}
@@ -305,29 +379,29 @@ const MainApp: React.FC = () => {
         filteredCount={filteredProfiles.length}
       />
 
-      {/* 6. Candidate Profile Discovery Feed */}
+      {/* 11. Candidate Profile Discovery Feed */}
       <main id="matches" className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-14 space-y-8">
         
         {/* Section Heading & Counter */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-4 border-b border-[#e5d7de]/70 dark:border-zinc-800">
           <div>
-            <span className="text-[11px] font-mono tracking-widest text-[#8b4e38] dark:text-rose-400 font-semibold uppercase block mb-1">
+            <span className="text-[11px] font-mono tracking-widest text-[#8b4e38] dark:text-amber-400 font-semibold uppercase block mb-1">
               Curated Candidate Registry
             </span>
-            <h2 className="font-serif text-2xl sm:text-3xl text-[#23162c] dark:text-white font-normal flex items-center gap-3">
+            <h2 className="font-serif text-2xl sm:text-3xl text-[#1e1325] dark:text-white font-normal flex items-center gap-3">
               <span>Verified Matching {candidateGenderLabel}</span>
-              <span className="text-xs font-mono font-medium px-2.5 py-0.5 rounded-full bg-[#fdefff] dark:bg-zinc-900 border border-[#e5d7de] dark:border-zinc-800 text-[#5c4a5f] dark:text-zinc-400">
+              <span className="text-xs font-mono font-medium px-2.5 py-0.5 rounded-full bg-[#fdefff] dark:bg-zinc-900 border border-[#e5d7de] dark:border-zinc-800 text-[#554359] dark:text-zinc-400">
                 {filteredProfiles.length} Candidates
               </span>
             </h2>
-            <p className="font-sans text-xs text-[#5c4a5f] dark:text-zinc-400 mt-1">
+            <p className="font-sans text-xs text-[#554359] dark:text-zinc-400 mt-1">
               Candidates evaluated against {currentUser.fullName}'s astrological coordinates, career tier, and values.
             </p>
           </div>
 
-          <div className="flex items-center gap-2 text-xs font-mono text-[#5c4a5f] dark:text-zinc-400">
+          <div className="flex items-center gap-2 text-xs font-mono text-[#554359] dark:text-zinc-400">
             <span>Photo Shield:</span>
-            <span className={`px-2 py-0.5 rounded-full border text-[10px] ${
+            <span className={`px-2.5 py-0.5 rounded-full border text-[10px] ${
               globalPhotoShield 
                 ? 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-700/50' 
                 : 'bg-zinc-100 text-zinc-600 border-zinc-200 dark:bg-zinc-900 dark:text-zinc-400 dark:border-zinc-800'
@@ -340,18 +414,18 @@ const MainApp: React.FC = () => {
         {/* Candidate Grid */}
         {filteredProfiles.length === 0 ? (
           <div className="py-20 text-center rounded-3xl bg-white dark:bg-zinc-900/40 border border-[#e5d7de] dark:border-zinc-800 p-8 space-y-4 shadow-sm">
-            <div className="w-16 h-16 rounded-2xl bg-[#fdefff] dark:bg-zinc-900 border border-[#e5d7de] dark:border-zinc-800 flex items-center justify-center mx-auto text-[#8b4e38] dark:text-rose-400 shadow-inner">
+            <div className="w-16 h-16 rounded-2xl bg-[#fdefff] dark:bg-zinc-900 border border-[#e5d7de] dark:border-zinc-800 flex items-center justify-center mx-auto text-[#8b4e38] dark:text-amber-400 shadow-inner">
               <Search className="w-8 h-8" />
             </div>
             <div className="max-w-md mx-auto space-y-1">
-              <h3 className="font-serif text-xl text-[#23162c] dark:text-white font-normal">No Matching Profiles for Current Criteria</h3>
-              <p className="text-xs text-[#5c4a5f] dark:text-zinc-400 leading-relaxed font-sans">
+              <h3 className="font-serif text-xl text-[#1e1325] dark:text-white font-normal">No Matching Profiles for Current Criteria</h3>
+              <p className="text-xs text-[#554359] dark:text-zinc-400 leading-relaxed font-sans">
                 Try widening your age slider, lowering the minimum Kundali Guna threshold (currently ≥ {criteria.minGunas}), or clearing community/location filters.
               </p>
             </div>
             <button
               onClick={handleResetCriteria}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#415186] hover:bg-[#344479] text-white text-xs font-semibold shadow-md transition-all font-sans"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#415186] hover:bg-[#344479] text-white text-xs font-semibold shadow-md transition-all font-sans cursor-pointer"
             >
               <RotateCcw className="w-4 h-4" />
               <span>Reset All Criteria</span>
@@ -376,15 +450,18 @@ const MainApp: React.FC = () => {
 
       </main>
 
-      {/* 7. Take the Next Step Consultation Banner */}
+      {/* 12. Mobile App Download Banner Card */}
+      <MobileAppBannerCard />
+
+      {/* 13. Take the Next Step Consultation Banner */}
       <ConsultationBanner
         onOpenConsultationModal={() => setIsConsultationModalOpen(true)}
       />
 
-      {/* 8. Lovable 4-Column Footer */}
+      {/* 14. Lovable 4-Column Footer */}
       <FooterSection />
 
-      {/* 9. In-Depth Profile Drawer / Slide-Over Modal */}
+      {/* 15. In-Depth Profile Drawer / Slide-Over Modal */}
       <ProfileDrawer
         profile={inspectingProfile}
         isOpen={Boolean(inspectingProfile)}
@@ -403,7 +480,7 @@ const MainApp: React.FC = () => {
         globalPhotoShield={globalPhotoShield}
       />
 
-      {/* 10. Shortlisted & Sent Workspace Drawer */}
+      {/* 16. Shortlisted & Sent Workspace Drawer */}
       <ShortlistDrawer
         isOpen={isShortlistDrawerOpen}
         onClose={() => setIsShortlistDrawerOpen(false)}
@@ -417,7 +494,7 @@ const MainApp: React.FC = () => {
         onSendInterest={handleSendInterest}
       />
 
-      {/* 11. Simulated Secure Chat Modal */}
+      {/* 17. Simulated Secure Chat Modal */}
       <ChatModal
         profile={chatProfile}
         currentUser={currentUser}
@@ -425,14 +502,14 @@ const MainApp: React.FC = () => {
         onClose={() => setChatProfile(null)}
       />
 
-      {/* 12. Printable Bio-Data Modal */}
+      {/* 18. Printable Bio-Data Modal */}
       <BioDataModal
         profile={bioDataProfile}
         isOpen={Boolean(bioDataProfile)}
         onClose={() => setBioDataProfile(null)}
       />
 
-      {/* 13. 1-on-1 Consultation Booking Modal */}
+      {/* 19. 1-on-1 Consultation Booking Modal */}
       <ConsultationModal
         isOpen={isConsultationModalOpen}
         onClose={() => setIsConsultationModalOpen(false)}
