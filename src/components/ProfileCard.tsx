@@ -13,7 +13,8 @@ import {
   Eye, 
   EyeOff, 
   Building,
-  Volume2
+  Volume2,
+  LogIn
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import type { Profile } from '../types/profile';
@@ -27,6 +28,8 @@ interface ProfileCardProps {
   onToggleShortlist: (id: string) => void;
   onSendInterest: (id: string) => void;
   onInspectProfile: (profile: Profile) => void;
+  isLoggedIn?: boolean;
+  onRequireAuth?: () => void;
 }
 
 export const ProfileCard: React.FC<ProfileCardProps> = ({
@@ -37,6 +40,8 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
   onToggleShortlist,
   onSendInterest,
   onInspectProfile,
+  isLoggedIn = true,
+  onRequireAuth,
 }) => {
   // Local photo shield toggle for this specific card
   const [photoUnlocked, setPhotoUnlocked] = useState(false);
@@ -47,6 +52,10 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
 
   const handleSendInterest = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (!isLoggedIn && onRequireAuth) {
+      onRequireAuth();
+      return;
+    }
     if (!isInterestSent) {
       onSendInterest(profile.id);
       addToast(
@@ -68,6 +77,10 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
 
   const handleToggleShortlist = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (!isLoggedIn && onRequireAuth) {
+      onRequireAuth();
+      return;
+    }
     onToggleShortlist(profile.id);
     if (!isShortlisted) {
       addToast('Added to Shortlist', `${profile.fullName} saved to your review queue`, 'heart');
@@ -336,6 +349,11 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
               <>
                 <Check className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
                 <span>Interest Sent ✓</span>
+              </>
+            ) : !isLoggedIn ? (
+              <>
+                <LogIn className="w-3.5 h-3.5" />
+                <span>Sign In to Connect</span>
               </>
             ) : (
               <>

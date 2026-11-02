@@ -8,6 +8,10 @@ import { PillarsSection } from './components/PillarsSection';
 import { PhilosophySection } from './components/PhilosophySection';
 import { SuccessStoriesSection } from './components/SuccessStoriesSection';
 import { ShaadiLiveCard } from './components/ShaadiLiveCard';
+import { PublicWhatWeOfferSection } from './components/PublicWhatWeOfferSection';
+import { HowItWorksSection } from './components/HowItWorksSection';
+import { PricingTiersSection } from './components/PricingTiersSection';
+import { AuthModal } from './components/AuthModal';
 import { MatchCriteriaWeaver } from './components/MatchCriteriaWeaver';
 import { ProfileCard } from './components/ProfileCard';
 import { ProfileDrawer } from './components/ProfileDrawer';
@@ -42,6 +46,15 @@ const DEFAULT_CRITERIA: FilterCriteria = {
 const MainApp: React.FC = () => {
   // Current logged in perspective
   const [currentUser, setCurrentUser] = useState<CurrentUser>(CURRENT_USERS[0]);
+
+  // Visitor Authentication State: Default false for prospective visitors exploring public features
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
+    const saved = localStorage.getItem('sangam_is_logged_in');
+    return saved !== null ? saved === 'true' : false;
+  });
+
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
 
   // Persistent shortlists and interest state
   const [shortlistIds, setShortlistIds] = useState<string[]>(() => {
@@ -85,6 +98,40 @@ const MainApp: React.FC = () => {
   const [isConsultationModalOpen, setIsConsultationModalOpen] = useState(false);
 
   const { addToast } = useToast();
+
+  const handleLoginSuccess = (user: CurrentUser) => {
+    setCurrentUser(user);
+    setIsLoggedIn(true);
+    localStorage.setItem('sangam_is_logged_in', 'true');
+    setIsAuthModalOpen(false);
+  };
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    localStorage.setItem('sangam_is_logged_in', 'false');
+    addToast('Signed Out', 'You are now viewing the public landing experience', 'info');
+  };
+
+  const handleToggleAuthMode = () => {
+    const next = !isLoggedIn;
+    setIsLoggedIn(next);
+    localStorage.setItem('sangam_is_logged_in', String(next));
+    addToast(
+      next ? 'Switched to Member Workspace' : 'Switched to Public Before-Login Page',
+      next ? `Viewing authenticated platform as ${currentUser.fullName}` : 'Viewing public offerings, pricing & roadmaps',
+      'sparkle'
+    );
+  };
+
+  const openLogin = () => {
+    setAuthModalMode('login');
+    setIsAuthModalOpen(true);
+  };
+
+  const openRegister = () => {
+    setAuthModalMode('register');
+    setIsAuthModalOpen(true);
+  };
 
   // Save to local storage on change
   useEffect(() => {
@@ -302,6 +349,7 @@ const MainApp: React.FC = () => {
       
       {/* 1. Header & Navigation matching url-weaver-workshop */}
       <Header
+        isLoggedIn={isLoggedIn}
         currentUser={currentUser}
         onSelectUser={(u) => {
           setCurrentUser(u);
@@ -309,12 +357,22 @@ const MainApp: React.FC = () => {
         }}
         shortlistCount={shortlistIds.length}
         interestsCount={interestSentIds.length}
-        onOpenShortlists={() => setIsShortlistDrawerOpen(true)}
+        onOpenShortlists={() => {
+          if (!isLoggedIn) {
+            openLogin();
+          } else {
+            setIsShortlistDrawerOpen(true);
+          }
+        }}
         globalPhotoShield={globalPhotoShield}
         onToggleGlobalPhotoShield={handleToggleGlobalShield}
         isDarkMode={isDarkMode}
         onToggleTheme={() => setIsDarkMode(!isDarkMode)}
         onBookConsultation={() => setIsConsultationModalOpen(true)}
+        onLoginClick={openLogin}
+        onRegisterClick={openRegister}
+        onLogout={handleLogout}
+        onToggleAuthMode={handleToggleAuthMode}
       />
 
       {/* 2. Hero Section */}
@@ -329,7 +387,18 @@ const MainApp: React.FC = () => {
         onQuickSearch={handleShaadiQuickSearch}
       />
 
-      {/* 4. Shaadi-Style "Browse Matches By Category" Banner Cards */}
+      {/* 4. Public "What We Offer" 6-Pillar Interactive Suite */}
+      <PublicWhatWeOfferSection
+        onRegisterClick={openRegister}
+        onExploreVIP={() => setIsConsultationModalOpen(true)}
+      />
+
+      {/* 5. How It Works: 4-Step Verified Matchmaking Roadmap */}
+      <HowItWorksSection
+        onRegisterClick={openRegister}
+      />
+
+      {/* 6. Shaadi-Style "Browse Matches By Category" Banner Cards */}
       <BrowseCategoryCards
         onSelectCareer={(tier: CareerTier) => {
           setCriteria(prev => ({ ...prev, careerTier: tier }));
@@ -353,22 +422,33 @@ const MainApp: React.FC = () => {
         }}
       />
 
-      {/* 5. VIP Shaadi / Elite Matchmaking Banner Card */}
+      {/* 7. VIP Shaadi / Elite Matchmaking Banner Card */}
       <VipShaadiBannerCard
         onInquireVip={() => setIsConsultationModalOpen(true)}
       />
 
-      {/* 6. Two Foundational Pillars of Care */}
+      {/* 8. Two Foundational Pillars of Care */}
       <PillarsSection />
 
-      {/* 7. Matchmaker Philosophy Section */}
+      {/* 9. Matchmaker Philosophy Section */}
       <PhilosophySection />
 
-      {/* 8. Real Unions & Success Stories Showcase */}
+      {/* 10. Real Unions & Success Stories Showcase */}
       <SuccessStoriesSection />
 
-      {/* 9. Shaadi Live: Curated Virtual Speed Meets Banner */}
+      {/* 11. Shaadi Live: Curated Virtual Speed Meets Banner */}
       <ShaadiLiveCard />
+
+      {/* 12. Membership Plans & Transparent Pricing */}
+      <PricingTiersSection
+        onSelectTier={(tierName) => {
+          if (tierName === 'VIP Select Concierge') {
+            setIsConsultationModalOpen(true);
+          } else {
+            openRegister();
+          }
+        }}
+      />
 
       {/* 10. The "Match Criteria Weaver" (Workshop Control Bar) */}
       <MatchCriteriaWeaver
@@ -443,6 +523,8 @@ const MainApp: React.FC = () => {
                 onToggleShortlist={handleToggleShortlist}
                 onSendInterest={handleSendInterest}
                 onInspectProfile={(p) => setInspectingProfile(p)}
+                isLoggedIn={isLoggedIn}
+                onRequireAuth={openLogin}
               />
             ))}
           </div>
@@ -478,6 +560,8 @@ const MainApp: React.FC = () => {
           setBioDataProfile(p);
         }}
         globalPhotoShield={globalPhotoShield}
+        isLoggedIn={isLoggedIn}
+        onRequireAuth={openLogin}
       />
 
       {/* 16. Shortlisted & Sent Workspace Drawer */}
@@ -513,6 +597,14 @@ const MainApp: React.FC = () => {
       <ConsultationModal
         isOpen={isConsultationModalOpen}
         onClose={() => setIsConsultationModalOpen(false)}
+      />
+
+      {/* 20. Public Authentication & Registration Modal */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onLoginSuccess={handleLoginSuccess}
+        initialMode={authModalMode}
       />
 
     </div>

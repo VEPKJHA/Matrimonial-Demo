@@ -36,6 +36,8 @@ interface ProfileDrawerProps {
   onOpenChat: (profile: Profile) => void;
   onOpenBioData: (profile: Profile) => void;
   globalPhotoShield: boolean;
+  isLoggedIn?: boolean;
+  onRequireAuth?: () => void;
 }
 
 export const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
@@ -49,6 +51,8 @@ export const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
   onOpenChat,
   onOpenBioData,
   globalPhotoShield,
+  isLoggedIn = true,
+  onRequireAuth,
 }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'career' | 'family' | 'kundali'>('overview');
   const [photoUnlocked, setPhotoUnlocked] = useState(false);
@@ -60,6 +64,10 @@ export const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
   const isShieldActive = globalPhotoShield && !photoUnlocked && !isInterestSent;
 
   const handleSendInterest = () => {
+    if (!isLoggedIn && onRequireAuth) {
+      onRequireAuth();
+      return;
+    }
     if (!isInterestSent) {
       onSendInterest(profile.id);
       addToast('Interest Sent!', `Direct interest sent to ${profile.fullName}`, 'success');
@@ -69,6 +77,14 @@ export const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
         origin: { y: 0.6 },
       });
     }
+  };
+
+  const handleToggleShortlist = () => {
+    if (!isLoggedIn && onRequireAuth) {
+      onRequireAuth();
+      return;
+    }
+    onToggleShortlist(profile.id);
   };
 
   const handleTogglePhotoShield = () => {
@@ -125,7 +141,7 @@ export const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
             {/* Quick Actions (Close & Bookmark) */}
             <div className="flex items-center gap-2 shrink-0">
               <button
-                onClick={() => onToggleShortlist(profile.id)}
+                onClick={handleToggleShortlist}
                 className={`p-2 rounded-xl border transition-colors ${
                   isShortlisted
                     ? 'bg-rose-500/15 border-rose-500/40 text-rose-500'
@@ -580,7 +596,13 @@ export const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
             {/* Auxiliary Tools: Chat, Bio-Data PDF, Photo Access */}
             <div className="flex items-center gap-2">
               <button
-                onClick={() => onOpenChat(profile)}
+                onClick={() => {
+                  if (!isLoggedIn && onRequireAuth) {
+                    onRequireAuth();
+                  } else {
+                    onOpenChat(profile);
+                  }
+                }}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-medium border border-zinc-700 transition-colors"
                 title="Initiate simulated chat"
               >
